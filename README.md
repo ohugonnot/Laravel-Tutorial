@@ -38,7 +38,7 @@ RewriteRule ^ index.php [L]
 L'ensemble des configs dans le repertoire ```config```       
 Utilise les variables d'environnement ```.env```     
 
-```
+```php
 // Retrouver une variable d'environnement du .env, avec valeur par defaut en deuxieme param
 'debug' => env('APP_DEBUG', false),
 
@@ -56,4 +56,57 @@ php artisan config:cache
 ## Concepts du Framework
 
 ### Le cycle de vie d'une requête
+
+## Les routes
+
+```php
+// les routes basique avec réponse directe
+Route::get('/bonjour/{name}/{age}', function ($name, $age) {
+    $url = route("bonjour.nom.age", ["name" => "isabelle", "age" => 30]);
+    return "Bonjour ${name}, tu as ${age} an(s) est l'url est ${url}";
+})->name("bonjour.nom.age");
+
+// connexion entre route et controlleurs
+Route::get('/user', 'UserController@index');
+// si le controlleur et créer avec --resource
+Route::resource('/user', 'UserController');
+```
+
+## Les vues
+
+```php
+// si la vue est dans un sous repertoire utiliser le . pour créer le path
+Route::get('/', function () {
+    return view('pages.name', ['name' => 'James'])->with('lastname', 'Victoria');
+});
+// on peut utiliser la fonction comptact() pour créer facilement le [] de data
+
+// Déterminer si une vue existe
+use Illuminate\Support\Facades\View;
+
+if (View::exists('pages.name')) {
+    //
+}
+
+// On peut renvoyer la première vue dans une liste de vues définis
+return view()->first(['pages.name', 'name'], $data);
+```
+
+```html
+<!-- View stored in resources/views/pages/name.blade.php -->
+<html>
+    <body>
+        <h1>Hello, {{ $name }}</h1>
+    </body>
+</html>
+```
+
+### Blade : moteur de template
+
+## Les controllers
+
+Créer un controlleur avec les fonctions de base
+```
+php artisan make:controller --resource TestController
+```
 
