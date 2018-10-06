@@ -57,6 +57,18 @@ php artisan config:cache
 
 ### Le cycle de vie d'une requête
 
+-> envoit de requête HTTP
+-> lancement de l'app et création du service container      
+-> envoit de la requète au Kernel HTTP : ```app/Http/Kernel.php```    
+-> le kernel lance les boostrapers dont le service providers : ```app/Providers```  
+-> le kernel définis une liste de middleware que les requêtes doivent passer (session, crsf)     
+-> la route lance le controller et les routes middlewares    
+-> retourne une reponse      
+
+### Service Container
+
+
+
 ## Les routes
 
 ```php
