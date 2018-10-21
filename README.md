@@ -1,9 +1,21 @@
 # Laravel-Tutorial
 
+1. Install
+2. Configuration
+3. Concepts du Framework
+4. Les bases     
+    4.1 Routes     
+    4.2 Middleware    
+    4.3 CSRF    
+    4.4 Les controllers    
+    4.5 Request     
+    4.6 Response     
+    4.7 Les views     
+    
 Pour la déscription détaillée des différentes classes du framework
 [Documentation API](https://laravel.com/api/5.7/)
 
-## Install
+## 1. Install
 
 ##### installation des packages
 ```
@@ -36,7 +48,7 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^ index.php [L]
 ```
 
-## Configuration
+## 2. Configuration
 
 L'ensemble des configs dans le repertoire ```config```       
 Utilise les variables d'environnement ```.env```     
@@ -61,7 +73,7 @@ config(['app.timezone' => 'America/Chicago']);
 php artisan config:cache
 ```
 
-## Concepts du Framework
+## 3. Concepts du Framework
 
 ### Le cycle de vie d'une requête
 
@@ -77,9 +89,9 @@ php artisan config:cache
 
 // Todo, pour l'instant je comprends rien         
 
-## Les bases
+## 4. Les bases
 
-### Les routes
+### 4.1 Les routes
 
 ```php
 // les différentes méthodes disponibles
@@ -141,7 +153,7 @@ $action = Route::currentRouteAction();
 Il y a pas mal d'info pour des cas particulier d'utilisation de route dans la doc       
 https://laravel.com/docs/5.7/routing -> (Route Groupe, Route Binding, Route Callback, Rate limit)     
 
-### Middleware
+### 4.2 Middleware
 
 Les middlewares sont des mécanismes qui s'enclenche avant ou après l'envois de la requetes au kernel.     
 Ils permettent par exemple de vérifier l'authentification, de bindé la session, d'ajouter un CSRF      
@@ -225,7 +237,193 @@ On peut les register soit en __Globale__, soit en __Groupe__, soit en __Route Ke
     // on peut aussi ajouter la methode therminate() pour catcher la réponse complète et la request de départ
 ```
 
-### Les vues
+### 4.3 CSRF
+
+```html
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
+<form method="POST" action="/profile">
+    @csrf
+    ...
+</form>
+```
+
+```javascript
+$.ajaxSetup({
+    headers: {
+        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+    }
+});
+```
+
+### 4.4 Les controllers
+
+Dans le repertoire  ```app/Http/Controllers```      
+
+```php
+namespace App\Http\Controllers;
+
+use App\User;
+use App\Http\Controllers\Controller;
+
+class UserController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware('auth');
+
+        $this->middleware('log')->only('index');
+
+        $this->middleware('subscribed')->except('store');
+    }
+    
+    public function show($id)
+    {
+        return view('user.profile', ['user' => User::findOrFail($id)]);
+    }
+}
+
+// Dans les routes
+Route::get('user/{id}', 'UserController@show');
+```
+
+```
+php artisan make:controller ShowProfile --invokable  // pour les controllers mono action
+php artisan make:controller PhotoController --resource --model=Photo // créer un controller avec toutes les ressources CRUD
+```
+
+### 4.5 Request
+
+```php
+// Les principales méthodes de request
+$uri = $request->path();
+if ($request->is('admin/*')) {
+    //
+}
+
+// Without Query String...
+$url = $request->url();
+
+// With Query String...
+$url = $request->fullUrl();
+
+// Retrouver la méthode
+$method = $request->method();
+
+if ($request->isMethod('post')) {
+    //
+}
+
+// retrouver les inputs
+$input = $request->all();
+$name = $request->input('name', 'Sally');
+$name = $request->input('products.0.name');
+$names = $request->input('products.*.name');
+$name = $request->name;
+$input = $request->only('username', 'password');
+$input = $request->except('credit_card');
+
+if ($request->has(['name', 'email'])) {
+    //
+}
+// present et non vide
+if ($request->filled('name')) {
+    //
+}
+
+// retrouver les query
+$name = $request->query('name', 'Helen');
+$query = $request->query();
+
+// mémoriser toutes les information de la request dans la session
+$request->flash();
+$request->flashOnly(['username', 'email']);
+$request->flashExcept('password');
+return redirect('form')->withInput(
+    $request->except('password')
+);
+
+// pour retrouver les anciennes valeurs
+$username = $request->old('username');
+<input type="text" name="username" value="{{ old('username') }}">
+
+// les cookies
+$value = $request->cookie('name');
+return response('Hello World')->cookie(
+    'name', 'value', $minutes
+);
+
+// les files
+$file = $request->file('photo');
+$file = $request->photo;
+if ($request->hasFile('photo')) {
+    //
+}
+if ($request->file('photo')->isValid()) {
+    //
+}
+$path = $request->photo->path();
+$extension = $request->photo->extension()
+$path = $request->photo->store('images');
+$path = $request->photo->storeAs('images', 'filename.jpg');
+```
+
+### 4.6 Response
+
+Il est possible de retourner un string -> html       
+Il est possible de retourner un array -> json         
+ 
+```php
+// Retourner une réponse classique
+return response($content)
+            ->header('Content-Type', $type)
+            ->header('X-Header-One', 'Header Value')
+            or
+            ->withHeaders([
+                'Content-Type' => $type,
+                'X-Header-One' => 'Header Value',
+            ])
+            
+             ->cookie('name', 'value', $minutes);
+    
+// retourner une redirection
+return redirect('home/dashboard');
+return back()->withInput();
+return redirect()->route('profile', ['id' => 1]);
+// prepopulate avec eloquent
+return redirect()->route('profile', [$user]);
+return redirect()->action(
+    'UserController@profile', ['id' => 1]
+);
+return redirect()->away('https://www.google.com');
+return redirect('dashboard')->with('status', 'Profile updated!');
+
+// Retourner un view
+return response()
+            ->view('hello', $data, 200)
+            ->header('Content-Type', $type);
+            ->cookie
+            
+// Retourner un json
+return response()->json([
+    'name' => 'Abigail',
+    'state' => 'CA'
+]);
+
+
+// Retourner un fichier à télécharger
+return response()->download($pathToFile);
+return response()->download($pathToFile, $name, $headers);
+return response()->download($pathToFile)->deleteFileAfterSend();
+return response()->streamDownload(function () {
+    //
+}, $name);
+
+// Retourner l'affichage d'un fichier par exemple PDF/Image
+return response()->file($pathToFile, $headers);
+```
+
+### 4.7 Les vues
 
 ```php
 // si la vue est dans un sous repertoire utiliser le . pour créer le path
@@ -243,6 +441,11 @@ if (View::exists('pages.name')) {
 
 // On peut renvoyer la première vue dans une liste de vues définis
 return view()->first(['pages.name', 'name'], $data);
+
+// Pour créer des urls
+url()->current()->full()->previous()
+route('post.show', ['post' => 1]);
+$url = action([HomeController::class, 'index']);
 ```
 
 ```html
