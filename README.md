@@ -1,6 +1,6 @@
 # Laravel-Tutorial
 
-Pour la déscriptions détailler des différentes classes du framework
+Pour la déscription détaillée des différentes classes du framework
 [Documentation API](https://laravel.com/api/5.7/)
 
 ## Install
@@ -28,6 +28,9 @@ php artisan dump-server
 Options +FollowSymLinks -Indexes
 RewriteEngine On
 
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^ index.php [L]
@@ -45,6 +48,11 @@ Utilise les variables d'environnement ```.env```
 // accéder à la variable d'environnement
 $environment = App::environment();
 
+// lancer des conditions celon les environnements
+if (App::environment(['local', 'staging'])) {
+    // The environment is either local OR staging...
+}
+
 // retrouver et changer les variables de configurations
 $value = config('app.timezone');
 config(['app.timezone' => 'America/Chicago']);
@@ -57,38 +65,167 @@ php artisan config:cache
 
 ### Le cycle de vie d'une requête
 
--> envoit de requête HTTP
--> lancement de l'app et création du service container      
--> envoit de la requète au Kernel HTTP : ```app/Http/Kernel.php```    
--> le kernel lance les boostrapers dont le service providers : ```app/Providers```  
--> le kernel définis une liste de middleware que les requêtes doivent passer (session, crsf)     
--> la route lance le controller et les routes middlewares    
--> retourne une reponse      
+-> envoit de requête HTTP       
+-> lancement de l'app et création du service container ``` bootstrap/app.php```          
+-> envoit de la requète au Kernel HTTP : ```app/Http/Kernel.php```      
+-> le kernel lance les boostrapers dont le service providers : ```app/Providers```    
+-> le kernel définis une liste de middleware que les requêtes doivent passer (session, crsf)       
+-> la route lance le controller et les routes middlewares      
+-> retourne une reponse        
 
-### Service Container
+### Service Container & Service providers
 
+// Todo, pour l'instant je comprends rien         
 
+## Les bases
 
-## Les routes
+### Les routes
 
 ```php
-// les routes basique avec réponse directe
-Route::get('/bonjour/{name}/{age}', function ($name, $age) {
+// les différentes méthodes disponibles
+Route::get($uri, $callback);
+Route::post($uri, $callback);
+Route::put($uri, $callback);
+Route::patch($uri, $callback);
+Route::delete($uri, $callback);
+Route::options($uri, $callback);
+
+// on peut ajouter plusieurs méthode à la fois
+Route::match(['get', 'post'], '/', function () {
+    //
+});
+
+// toutes les méthodes 
+Route::any('/', function () {
+    //
+});
+
+// les routes basiques avec réponse directe et params (facultatif ou non)
+Route::get('/bonjour/{name?}/{age?}', function ($id, $name = "John", $age = null) {
+    // créer un lien avec une route nommée
     $url = route("bonjour.nom.age", ["name" => "isabelle", "age" => 30]);
     return "Bonjour ${name}, tu as ${age} an(s) est l'url est ${url}";
-})->name("bonjour.nom.age");
+    // ou..
+    return redirect()->route('home');
+})->name("bonjour.nom.age") // donner un nom à la route
+  ->where(['id' => '[0-9]+', 'name' => '[a-z]+']); // contraintes regex sur les params
+  
+// Pour créer des contraintes globales sur les params il faut changer le boot() du RouteServiceProvider
+public function boot()
+{
+    Route::pattern('id', '[0-9]+');
+    parent::boot();
+}
 
 // connexion entre route et controlleurs avec un middleware
-Route::get('/user', 'UserController@index')->middleware('auth');;
+Route::get('/user', 'UserController@index')->middleware('auth');
 // si le controlleur et créer avec --resource pour avoir les principales fonctions CRUD
 Route::resources([
     'photos' => 'PhotoController',
     'posts' => 'PostController',
-    'users' => UserController
+    'users' => 'UserController'
 ]);
+
+// Créer une redirection
+Route::redirect('/here', '/there', 301);
+
+// si on ne passe par aucun controller on peut créer directement des routes -> view
+Route::view('/welcome', 'welcome', ['name' => 'Taylor']);
+
+// Accéder à la route, au nom et a l'action partout dans l'outil
+$route = Route::current();
+$name = Route::currentRouteName();
+$action = Route::currentRouteAction();
 ```
 
-## Les vues
+Il y a pas mal d'info pour des cas particulier d'utilisation de route dans la doc       
+https://laravel.com/docs/5.7/routing -> (Route Groupe, Route Binding, Route Callback, Rate limit)     
+
+### Middleware
+
+Les middlewares sont des mécanismes qui s'enclenche avant ou après l'envois de la requetes au kernel.     
+Ils permettent par exemple de vérifier l'authentification, de bindé la session, d'ajouter un CSRF      
+Ils sont situés dans ```app/Http/Middldeware```       
+On peut créér un middleware avec la commande artisan ```php artisan make:middleware CheckAge```     
+
+__BeforeMiddleware__
+```php
+namespace App\Http\Middleware;
+use Closure;
+
+class BeforeMiddleware
+{
+    public function handle($request, Closure $next)
+    {
+        // Perform action
+
+        return $next($request);
+    }
+}
+```
+
+__AfterMiddleware__
+```php
+namespace App\Http\Middleware;
+use Closure;
+
+class AfterMiddleware
+{
+    public function handle($request, Closure $next)
+    {
+        $response = $next($request);
+
+        // Perform action
+
+        return $response;
+    }
+}
+```
+
+Ensuite il faut register le middleware dans ```app/Http/Kernel.php```     
+On peut les register soit en __Globale__, soit en __Groupe__, soit en __Route Key__
+
+```php
+    // Globale
+    protected $middleware = [
+        \App\Http\Middleware\CheckForMaintenanceMode::class,
+        .....
+    ];
+
+    // Par Groupe
+    protected $middlewareGroups = [
+        'web' => [
+            \App\Http\Middleware\EncryptCookies::class,
+            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            ....
+        ],
+
+        'api' => [
+            'throttle:60,1',
+            'bindings',
+        ],
+    ];
+
+    // Par Route key
+    protected $routeMiddleware = [
+        'auth' => \App\Http\Middleware\Authenticate::class,
+        ...
+        'after' => \App\Http\Middleware\AfterMiddleware::class,
+    ];
+
+    Route::get('/', function () {
+        // possibilité d'utilisé la key ou le full name
+    })->middleware('auth', AfterMiddleware::class);
+    
+    // On peu également passer des paramètres au middleware
+    Route::put('post/{id}', function ($id) {
+        //
+    })->middleware('role:editor');
+    
+    // on peut aussi ajouter la methode therminate() pour catcher la réponse complète et la request de départ
+```
+
+### Les vues
 
 ```php
 // si la vue est dans un sous repertoire utiliser le . pour créer le path
@@ -109,7 +246,6 @@ return view()->first(['pages.name', 'name'], $data);
 ```
 
 ```html
-<!-- View stored in resources/views/pages/name.blade.php -->
 <html>
     <body>
         <h1>Hello, {{ $name }}</h1>
