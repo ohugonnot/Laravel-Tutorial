@@ -3,6 +3,8 @@
 1. Install
 2. Configuration
 3. Concepts du Framework
+    3.1 Le cycle de vie d'une requête      
+    3.2 Service Container & Service providers      
 4. Les bases     
     4.1 Routes     
     4.2 Middleware    
@@ -75,17 +77,17 @@ php artisan config:cache
 
 ## 3. Concepts du Framework
 
-### Le cycle de vie d'une requête
+### 3.1 Le cycle de vie d'une requête
 
 -> envoit de requête HTTP       
 -> lancement de l'app et création du service container ``` bootstrap/app.php```          
 -> envoit de la requète au Kernel HTTP : ```app/Http/Kernel.php```      
 -> le kernel lance les boostrapers dont le service providers : ```app/Providers```    
--> le kernel définis une liste de middleware que les requêtes doivent passer (session, crsf)       
--> la route lance le controller et les routes middlewares      
--> retourne une reponse        
+-> le kernel définis une liste de middleware que les requêtes doivent passer (session, crsf) ```app/Http/Middleware```            
+-> la route lance le controller et les routes middlewares ```app/Http/Controllers```          
+-> retourne une reponse         
 
-### Service Container & Service providers
+### 3.2 Service Container & Service providers
 
 // Todo, pour l'instant je comprends rien         
 
