@@ -2,9 +2,9 @@
 
 1. Install
 2. Configuration
-3. Concepts du Framework
-    3.1 Le cycle de vie d'une requête      
-    3.2 Service Container & Service providers      
+3. Concepts du Framework        
+    3.1 Le cycle de vie d'une requête         
+    3.2 Service Container & Service providers         
 4. Les bases     
     4.1 Routes     
     4.2 Middleware    
@@ -152,13 +152,13 @@ $name = Route::currentRouteName();
 $action = Route::currentRouteAction();
 ```
 
-Il y a pas mal d'info pour des cas particulier d'utilisation de route dans la doc       
+Il y a pas mal d'info pour des cas particuliers d'utilisation de route dans la doc       
 https://laravel.com/docs/5.7/routing -> (Route Groupe, Route Binding, Route Callback, Rate limit)     
 
 ### 4.2 Middleware
 
-Les middlewares sont des mécanismes qui s'enclenche avant ou après l'envois de la requetes au kernel.     
-Ils permettent par exemple de vérifier l'authentification, de bindé la session, d'ajouter un CSRF      
+Les middlewares sont des mécanismes qui s'enclenchent avant ou après l'envoi de la requete au kernel.     
+Ils permettent par exemple de vérifier l'authentification, de binder la session, d'ajouter un CSRF      
 Ils sont situés dans ```app/Http/Middldeware```       
 On peut créér un middleware avec la commande artisan ```php artisan make:middleware CheckAge```     
 
@@ -260,8 +260,9 @@ $.ajaxSetup({
 
 ### 4.4 Les controllers
 
-Dans le repertoire  ```app/Http/Controllers```      
-
+Dans le repertoire  ```app/Http/Controllers```        
+Dans les controlleurs l'injection de dépendances est possible avec le TypeHint du service dans le construct ou dans les méthodes.      
+      
 ```php
 namespace App\Http\Controllers;
 
@@ -589,15 +590,6 @@ Il y a un objet __$loop__ accessibe dans les boucles
     <p>I'm looping forever.</p>
 @endwhile
 ```
-
-## Les controllers
-
-Créer un controlleur avec les fonctions de base en CRUD     
-```
-php artisan make:controller --resource TestController --model=Test
-```
-
-Dans les controlleurs l'injection de dépendances est possible avec le TypeHint du service dans le construct ou dans les méthodes.
 
 ## Databases
 
