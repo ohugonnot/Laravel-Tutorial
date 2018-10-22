@@ -12,7 +12,14 @@
     4.4 Les controllers    
     4.5 Request     
     4.6 Response     
-    4.7 Les views     
+    4.7 Les views    
+    4.8 Session    
+    4.9 Validation    
+    4.10 Errors handling et logs   
+5 Front-end       
+    5.1 Blade      
+    5.2 Localisation   
+    5.3 Scaffolding & Assets     
     
 Pour la déscription détaillée des différentes classes du framework
 [Documentation API](https://laravel.com/api/5.7/)
@@ -459,18 +466,169 @@ $url = action([HomeController::class, 'index']);
 </html>
 ```
 
-### Blade : moteur de template
+### 4.8 Sessions
+
+```php
+// Dans la request
+    $value = $request->session()->get('key', 'default'); // possibilité de passer une closure en param par defaut
+    $data = $request->session()->all();
+    $request->session()->put('key', 'value');
+    // on peux ajouter dans un array
+    $request->session()->push('user.teams', 'developers');
+    // selectionner et supprimer de la session en meme temps
+    $value = $request->session()->pull('key', 'default');
+    
+    // Les messages flash
+    $request->session()->flash('status', 'Task was successful!');
+    $request->session()->reflash();  // permet de garder les messages flash d'une requete à l'autre
+    $request->session()->keep(['username', 'email'])  // permet de garder uniquement certain message
+    
+    // supprimer completement de la session
+    $request->session()->forget('key')
+    $request->session()->flush();
+    
+    if ($request->session()->has('users')) {
+    // present et non null
+    }
+    if ($request->session()->exists('users')) {
+    // present peu importe la valeur
+    }
+    
+// Globalement
+    // Specifying a default value...
+    $value = session('key', 'default');
+
+    // Store a piece of data in the session...
+    session(['key' => 'value'])
+```
+
+### 4.9 Validation
+
+```php
+// Dans le controller on catch la request
+    $validatedData = $request->validate([
+         // bail permet d'arrêter la validation à l'erreur en cours
+        'title' => 'bail|required|unique:posts|max:255',
+        'body' => 'required',
+        // possibilité d'utiliser des attribut nested
+        'author.name' => 'required',
+        'author.description' => 'required',
+        'publish_at' => 'nullable|date',  // nullable pour optionnelle, car middleware ConvertEmptyStringsToNull 
+    ]);
+    
+ // Pour les validations plus complète
+ php artisan make:request StoreBlogPost
+ // Cela créer un extend de request avec des rules
+public function rules()
+{
+    return [
+        'title' => 'required|unique:posts|max:255',
+        'body' => 'required',
+    ];
+}
+// il suffit ensuite de type hinter la request dans le controller
+public function store(StoreBlogPost $request)
+{
+    $validated = $request->validated();
+}
+// on peut également modifier le wording
+public function messages()
+{
+    return [
+        'title.required' => 'A title is required',
+        'body.required'  => 'A message is required',
+    ];
+}
+// et vérifier qu'on a l'authorisation d'acceder à cette request
+public function authorize()
+{
+    $comment = Comment::find($this->route('comment'));
+    return $comment && $this->user()->can('update', $comment);
+}
+```
+Si la validation échoue on retourne a la page précedente avec variable errors
+
+```html
+@if ($errors->any())
+    <div class="alert alert-danger">
+        <ul>
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+```
+Pour créer des Validation sur mesure et connaitre toutes les validation possible sur laravel     
+https://laravel.com/docs/5.7/validation#available-validation-rules
+https://laravel.com/docs/5.7/validation#custom-validation-rules
+
+### 4.10 Les logs et les erros handling
+
+```php
+namespace App\Exceptions;
+
+use Exception;
+
+class RenderException extends Exception
+{
+    public function report()
+    {
+        // gére la logic de l'exeption, log ou envoit a service externe
+    }
+    
+    // on peu également utilisé le report helper pour reporter un erreur sans forcement arreter l'application
+    try {
+        // Validate the value...
+    } catch (Exception $e) {
+        report($e);
+        return false;
+    }
+
+    public function render($request)
+    {
+        // gère l'affichage de l'exeption
+        return response(...);
+    }
+    
+    // on peut également utiliser le helper abot
+    abort(404, "Message");
+}
+```
+
+Il existe plusieurs drivers de log notament pour slack
+
+```php
+Log::emergency($message);
+Log::alert($message);
+Log::critical($message);
+Log::error($message);
+Log::warning($message);
+Log::notice($message);
+Log::info($message);
+Log::debug($message);
+
+Log::info('User failed to login.', ['id' => $user->id]);
+Log::channel('slack')->info('Something happened!');
+Log::stack(['single', 'slack'])->info('Something happened!');
+```
+
+## 5 Front-end
+
+### 5.1 Blade : moteur de template
 
 https://laravel.com/docs/5.7/blade   
 
 ```html
 // Création de commentaire en blade
 {{-- This comment will not be present in the rendered HTML --}}
-```html
+```
 
 #### Héritage
 
 Les tags __@yield @section @extends @include @component @parent__ utilisé pour l'héritage
+__@yield__ : pour remplacer le contenu dans une section ou une balise
+__@section__ : créer une section
 
 ```html
 <!-- Stored in resources/views/layouts/app.blade.php -->
@@ -590,6 +748,67 @@ Il y a un objet __$loop__ accessibe dans les boucles
     <p>I'm looping forever.</p>
 @endwhile
 ```
+
+### 5.2 Localisation
+
+Les traductions sont stockées dans le repertoire ```resources/lang```     
+Les fichiers retournent des array key => string
+
+```php
+return [
+    'welcome' => 'Welcome to our application'
+];
+
+// On peu changer la locale
+Route::get('welcome/{locale}', function ($locale) {
+    App::setLocale($locale);
+
+    //
+});
+
+// Déterminer quelle est la locale
+$locale = App::getLocale();
+if (App::isLocale('en')) {
+    //
+}
+
+'welcome' => 'Welcome, :name',
+{{ __('messages.welcome', ['name' => 'dayle']); }}
+@lang('messages.welcome')
+
+// pour les pluriels
+'apples' => 'There is one apple|There are many apples',
+'apples' => '{0} There are none|[1,19] There are some|[20,*] There are many',
+{{ trans_choice('messages.apples', 10) }}
+
+```
+
+### 5.3 Scaffolding & assets
+
+De base laravel céer une préconfiguration qui embarque Boostrap et Vuejs    
+On peut supprimer la préconfig ```php artisan preset none```     
+
+```
+npm install  ou  yarn install
+npm run dev/production   ou   yarn run dev/production
+npm run watch
+```
+
+Exemple de webpack.mix      
+
+```javascript
+const mix = require('laravel-mix');
+
+mix.js('resources/js/app.js', 'public/js').extract(['vue', "bootstrap","jquery","popper.js","lodash","axios"])
+mix.sass('resources/sass/app.scss', 'public/css');
+
+if (mix.inProduction()) {
+    mix.version();
+} else {
+    mix.sourceMaps();
+}
+```
+
 
 ## Databases
 
