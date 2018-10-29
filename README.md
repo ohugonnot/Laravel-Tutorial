@@ -4,7 +4,7 @@
 2. Configuration
 3. Concepts du Framework        
     3.1 Le cycle de vie d'une requête         
-    3.2 Service Container & Service providers         
+    3.2 Service Container & Service providers +contracts & facades        
 4. Les bases     
     4.1 Routes     
     4.2 Middleware    
@@ -94,9 +94,84 @@ php artisan config:cache
 -> la route lance le controller et les routes middlewares ```app/Http/Controllers```          
 -> retourne une reponse         
 
-### 3.2 Service Container & Service providers
+### 3.2 Service Container & Service providers + contracts & facades
 
-// Todo, pour l'instant je comprends rien         
+__Le Service Container__ est un outil qui permet de gérer les dépendances et les injections dans nos classes.      
+Une des spécificités de ce container est sa capacité à résoudre les classes de manière automatique. En effet, si aucune fonction n'a été enregistrée pour définir notre dépendance le framework tentera de construire l'objet tout seul en y injectant les dépendance de manière automatique si le constructeur en demande.       
+```php
+$this->app->bind('HelpSpot\API', function ($app) {
+    return new HelpSpot\API($app->make('HttpClient'));
+});
+$this->app->singleton('HelpSpot\API', function ($app) {
+    return new HelpSpot\API($app->make('HttpClient'));
+});
+$this->app->instance('HelpSpot\API', $api);
+$this->app->when('App\Http\Controllers\UserController')
+          ->needs('$variableName')
+          ->give($value);
+// binder avec une interface
+$this->app->bind(
+    'App\Contracts\EventPusher',
+    'App\Services\RedisEventPusher'
+);
+
+$api = $this->app->make('HelpSpot\API');
+$api = resolve('HelpSpot\API');
+$api = $this->app->makeWith('HelpSpot\API', ['id' => 1]);
+
+// les event container
+$this->app->resolving(function ($object, $app) {
+    // Called when container resolves object of any type...
+});
+
+$this->app->resolving(HelpSpot\API::class, function ($api, $app) {
+    // Called when container resolves objects of type "HelpSpot\API"...
+});
+
+```
+
+__Les services provider__ permettent d'enregistrer de nouveaux éléments dans notre service container mais aussi d'ajouter une logique au démarrage (boot()) de notre application.        
+
+    public function register()
+    {
+        $this->app->singleton(Connection::class, function ($app) {
+            return new Connection(config('riak'));
+        });
+    }
+    
+        /**
+     * All of the container bindings that should be registered.
+     *
+     * @var array
+     */
+    public $bindings = [
+        ServerProvider::class => DigitalOceanServerProvider::class,
+    ];
+
+    /**
+     * All of the container singletons that should be registered.
+     *
+     * @var array
+     */
+    public $singletons = [
+        DowntimeNotifier::class => PingdomDowntimeNotifier::class,
+    ];
+    
+    // fonction boot après que tous les service soit instancier possible d'injection
+        public function boot()
+    {
+        view()->composer('view', function () {
+            //
+        });
+    }
+    
+    // possibilité de defer un provider
+    protected $defer = true;
+```
+    
+Les Facades permettent d'appeler le Service Container à travers une classe static.      
+Les contracts sont des interface réutilisable      
+
 
 ## 4. Les bases
 
