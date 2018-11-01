@@ -100,7 +100,8 @@ php artisan config:cache
 ### 3.2 Service Container & Service providers + contracts & facades
 
 __Le Service Container__ est un outil qui permet de gérer les dépendances et les injections dans nos classes.      
-Une des spécificités de ce container est sa capacité à résoudre les classes de manière automatique. En effet, si aucune fonction n'a été enregistrée pour définir notre dépendance le framework tentera de construire l'objet tout seul en y injectant les dépendance de manière automatique si le constructeur en demande.       
+Une des spécificités de ce container est sa capacité à résoudre les classes de manière automatique. En effet, si aucune fonction n'a été enregistrée pour définir notre dépendance le framework tentera de construire l'objet tout seul en y injectant les dépendance de manière automatique si le constructeur en demande.   
+
 ```php
 $this->app->bind('HelpSpot\API', function ($app) {
     return new HelpSpot\API($app->make('HttpClient'));
@@ -130,11 +131,11 @@ $this->app->resolving(function ($object, $app) {
 $this->app->resolving(HelpSpot\API::class, function ($api, $app) {
     // Called when container resolves objects of type "HelpSpot\API"...
 });
-
 ```
 
 __Les services provider__ permettent d'enregistrer de nouveaux éléments dans notre service container mais aussi d'ajouter une logique au démarrage (boot()) de notre application.        
 
+```php
     public function register()
     {
         $this->app->singleton(Connection::class, function ($app) {
@@ -248,6 +249,7 @@ Ils sont situés dans ```app/Http/Middldeware```
 On peut créér un middleware avec la commande artisan ```php artisan make:middleware CheckAge```     
 
 __BeforeMiddleware__
+
 ```php
 namespace App\Http\Middleware;
 use Closure;
@@ -264,6 +266,7 @@ class BeforeMiddleware
 ```
 
 __AfterMiddleware__
+
 ```php
 namespace App\Http\Middleware;
 use Closure;
