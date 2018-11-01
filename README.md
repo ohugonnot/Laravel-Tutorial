@@ -20,7 +20,10 @@
     5.1 Blade      
     5.2 Localisation   
     5.3 Scaffolding & Assets     
-    
+6 Sécurité      
+    6.1 Authentication      
+    6.2 Authorization      
+
 Pour la déscription détaillée des différentes classes du framework
 [Documentation API](https://laravel.com/api/5.7/)
 
@@ -884,6 +887,237 @@ if (mix.inProduction()) {
 }
 ```
 
+## 6 Sécurité
+
+### 6.1 Authentification
+
+```
+// créer les controllers, les layouts pour login, register, reset password ect dans resources/views/auth
+php artisan make:auth
+// Pour gérer les accès utilisateurs éplucher les controlleurs
+LoginController, RegisterController, ResetPasswordController, and VerificationController
+// ainsi que les middleware
+Authenticate
+RedirectIfAuthenticated 
+// Il est possible de changer la redirection post connexion soit en changeant le param soit en créer une méthode
+protected $redirectTo = '/';
+protected function redirectTo()
+{
+    return '/path';
+}
+
+// Pour modifier le param qui sert d'username il faut modifier le controller LoginController
+public function username()
+{
+    return 'username';
+}
+// Pour pouvoir ce connecter par email ou username
+public function username()
+{
+   $login = request()->input('login');
+   $field = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+   request()->merge([$field => $login]);
+   return $field;
+}
+
+// Get the currently authenticated user...
+$user = Auth::user();
+
+// Get the currently authenticated user's ID...
+$id = Auth::id();
+
+// l'user est aussi accessible directement depuis la requete
+$request->user() 
+
+// Vérifier si un user est authentifié
+if (Auth::check()) {
+    // The user is logged in...
+}
+
+// Pour proteger les routes
+Route::get('profile', function () {
+
+})->middleware('auth');
+
+// On peut également proteger tout un controller dans le construct avec le guard
+public function __construct()
+{
+    $this->middleware('auth:api');
+}
+
+// logout
+Auth::logout();
+
+// loguer une instance user déjà existante
+Auth::login($user);
+Auth::loginUsingId(1);
+
+// Login and "remember" the given user...
+Auth::login($user, true);
+Auth::loginUsingId(1, true);
+
+// Les listeners d'authentification user
+protected $listen = [
+    'Illuminate\Auth\Events\Registered' => [
+        'App\Listeners\LogRegisteredUser',
+    ],
+
+    'Illuminate\Auth\Events\Attempting' => [
+        'App\Listeners\LogAuthenticationAttempt',
+    ],
+
+    'Illuminate\Auth\Events\Authenticated' => [
+        'App\Listeners\LogAuthenticated',
+    ],
+
+    'Illuminate\Auth\Events\Login' => [
+        'App\Listeners\LogSuccessfulLogin',
+    ],
+
+    'Illuminate\Auth\Events\Failed' => [
+        'App\Listeners\LogFailedLogin',
+    ],
+
+    'Illuminate\Auth\Events\Logout' => [
+        'App\Listeners\LogSuccessfulLogout',
+    ],
+
+    'Illuminate\Auth\Events\Lockout' => [
+        'App\Listeners\LogLockout',
+    ],
+
+    'Illuminate\Auth\Events\PasswordReset' => [
+        'App\Listeners\LogPasswordReset',
+    ],
+];
+
+```
+
+### 6.1 Authorization
+
+#### Les Gates
+
+```php
+// App\Providers\AuthServiceProvider
+public function boot()
+{
+    $this->registerPolicies();
+
+    Gate::define('update-post', function ($user, $post) {
+        return $user->id == $post->user_id;
+    });
+    
+    // ou
+    Gate::define('update-post', 'App\Policies\PostPolicy@update');
+    Gate::resource('posts', 'App\Policies\PostPolicy');
+    // revient au même que 
+    Gate::define('posts.view', 'App\Policies\PostPolicy@view');
+    Gate::define('posts.create', 'App\Policies\PostPolicy@create');
+    Gate::define('posts.update', 'App\Policies\PostPolicy@update');
+    Gate::define('posts.delete', 'App\Policies\PostPolicy@delete');
+    
+    Gate::resource('posts', 'PostPolicy', [
+        'image' => 'updateImage',
+        'photo' => 'updatePhoto',
+    ]);
+    
+    // Utiliser les gates, le user est automatiquement injecté
+    if (Gate::allows('update-post', $post)) {
+        // The current user can update the post...
+    }
+
+    if (Gate::denies('update-post', $post)) {
+        // The current user can't update the post...
+    }
+    
+    // si on veut tester pour un $user définis
+    if (Gate::forUser($user)->allows('update-post', $post)) {
+    // The user can update the post...
+    }
+
+    if (Gate::forUser($user)->denies('update-post', $post)) {
+        // The user can't update the post...
+    }
+    
+    // Pour bypasser les gates
+    Gate::before(function ($user, $ability) {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+    });
+}
+```
+
+#### Les policies
+
+```php
+php artisan make:policy PostPolicy --model=Post
+
+// register la policy dans AuthServiceProvider 
+    protected $policies = [
+        Post::class => PostPolicy::class,
+    ];
+
+// Le policies sont des classes qui gèrent les droits
+// il est possible de faire passer les policies au guest en typehint le ?User
+// on peut également utiliser la fonction before pour bypassé
+namespace App\Policies;
+
+use App\User;
+use App\Post;
+
+class PostPolicy
+{
+    /**
+     * Determine if the given post can be updated by the user.
+     *
+     * @param  \App\User  $user
+     * @param  \App\Post  $post
+     * @return bool
+     */
+    public function update(?User $user, Post $post)
+    {
+        return $user->id === $post->user_id;
+    }
+    
+    public function before($user, $ability)
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+    }
+    
+    // comment utiliser les policies
+    if ($user->can('update', $post)) {
+        //
+    }
+    // pour les create quand il n'y a pas de model instancier
+    if ($user->can('create', Post::class)) {
+    // Executes the "create" method on the relevant policy...
+    }
+    
+    // on peut également les passer dans les middleware directement dans les routes
+    Route::put('/post/{post}', function (Post $post) {
+        // The current user may update the post...
+    })->middleware('can:update,post');
+    }
+    
+    // on peut également les utiliser dans les controlleurs grace au helpers
+    $this->authorize('update', $post);
+    
+    // et enfin dans les blades
+    @can('update', $post)
+        <!-- The Current User Can Update The Post -->
+    @elsecan('create', App\Post::class)
+        <!-- The Current User Can Create New Post -->
+    @endcan
+
+    @cannot('update', $post)
+        <!-- The Current User Can't Update The Post -->
+    @elsecannot('create', App\Post::class)
+        <!-- The Current User Can't Create New Post -->
+    @endcannot
+```
 
 ## Databases
 
