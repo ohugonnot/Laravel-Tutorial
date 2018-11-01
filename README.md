@@ -16,11 +16,11 @@
     4.8 Session    
     4.9 Validation    
     4.10 Errors handling et logs   
-5 Front-end       
+5. Front-end       
     5.1 Blade      
     5.2 Localisation   
     5.3 Scaffolding & Assets     
-6 Sécurité      
+6. Sécurité      
     6.1 Authentication      
     6.2 Authorization      
 
