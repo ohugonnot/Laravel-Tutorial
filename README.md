@@ -1171,7 +1171,7 @@ return $users->sum->votes;
 ### 7.2 Event
 
 Les events sont stockés dans ```app/events```    
-Les listeners sont stockés dans ```app/Listeners```     
+Les listeners sont stockés dans ```app/listeners```     
 
 ```php
 
@@ -1333,9 +1333,136 @@ class EventServiceProvider extends ServiceProvider
 
 ```
 
-## Databases
+## 8 Databases
 
-### Migrations
+### 8.1 Database query
+
+Il y a bcp de fonction pour créer les query voir https://laravel.com/docs/5.7/queries      
+
+
+```php
+DB::select('select * from users where id = :id', ['id' => 1]);
+DB::insert('insert into users (id, name) values (?, ?)', [1, 'Dayle']);
+$affected = DB::update('update users set votes = 100 where name = ?', ['John']);
+$deleted = DB::delete('delete from users');
+DB::statement('drop table users');
+
+// transaction
+DB::transaction(function () {
+    DB::table('users')->update(['votes' => 1]);
+
+    DB::table('posts')->delete();
+}, 5);
+
+// retourne une collection
+$users = DB::table('users')->get();
+$user = DB::table('users')->where('name', 'John')->first();
+$email = DB::table('users')->where('name', 'John')->value('email');
+$titles = DB::table('roles')->pluck('title');
+$roles = DB::table('roles')->pluck('title', 'name');
+
+foreach ($roles as $name => $title) {
+    echo $title;
+}
+DB::table('users')->orderBy('id')->chunk(100, function ($users) {
+    foreach ($users as $user) {
+        //
+    }
+    return false;
+});
+
+$users = DB::table('users')->count();
+$price = DB::table('orders')->max('price');
+$price = DB::table('orders')
+                ->where('finalized', 1)
+                ->avg('price');
+                
+return DB::table('orders')->where('finalized', 1)->exists();
+return DB::table('orders')->where('finalized', 1)->doesntExist();
+
+$users = DB::table('users')->select('name', 'email as user_email')->get();
+$users = DB::table('users')->distinct()->get();
+$query = DB::table('users')->select('name');
+$users = $query->addSelect('age')->get();
+$users = DB::table('users')
+                     ->select(DB::raw('count(*) as user_count, status'))
+                     ->where('status', '<>', 1)
+                     ->groupBy('status')
+                     ->get();
+$orders = DB::table('orders')
+                ->selectRaw('price * ? as price_with_tax', [1.0825])
+                ->get();
+$orders = DB::table('orders')
+                ->whereRaw('price > IF(state = "TX", ?, 100)', [200])
+                ->get();
+$orders = DB::table('orders')
+                ->select('department', DB::raw('SUM(price) as total_sales'))
+                ->groupBy('department')
+                ->havingRaw('SUM(price) > ?', [2500])
+                ->get();
+$orders = DB::table('orders')
+                ->orderByRaw('updated_at - created_at DESC')
+                ->get();
+                
+ // Les jointures               
+$users = DB::table('users')
+            ->join('contacts', 'users.id', '=', 'contacts.user_id')
+            ->join('orders', 'users.id', '=', 'orders.user_id')
+            ->select('users.*', 'contacts.phone', 'orders.price')
+            ->get();
+$users = DB::table('users')
+            ->leftJoin('posts', 'users.id', '=', 'posts.user_id')
+            ->get();
+DB::table('users')
+        ->join('contacts', function ($join) {
+            $join->on('users.id', '=', 'contacts.user_id')->orOn(...);
+        })
+        ->get();
+DB::table('users')
+        ->join('contacts', function ($join) {
+            $join->on('users.id', '=', 'contacts.user_id')
+                 ->where('contacts.user_id', '>', 5);
+        })
+        ->get();
+$latestPosts = DB::table('posts')
+                   ->select('user_id', DB::raw('MAX(created_at) as last_post_created_at'))
+                   ->where('is_published', true)
+                   ->groupBy('user_id');
+
+$users = DB::table('users')
+        ->joinSub($latestPosts, 'latest_posts', function ($join) {
+            $join->on('users.id', '=', 'latest_posts.user_id');
+        })->get();
+$first = DB::table('users')
+            ->whereNull('first_name');
+$users = DB::table('users')
+            ->whereNull('last_name')
+            ->union($first)
+            ->get();
+            
+// Les clauses where
+$users = DB::table('users')
+                ->where('votes', '>=', 100)
+                ->get();
+
+$users = DB::table('users')
+                ->where('votes', '<>', 100)
+                ->get();
+
+$users = DB::table('users')
+                ->where('name', 'like', 'T%')
+                ->get();
+$users = DB::table('users')->where([
+    ['status', '=', '1'],
+    ['subscribed', '<>', '1'],
+])->get();
+$users = DB::table('users')
+                    ->where('votes', '>', 100)
+                    ->orWhere('name', 'John')
+                    ->get();
+```
+
+### 8.2 Migrations
 
 ```
 // Créer une migration
