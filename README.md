@@ -23,7 +23,10 @@
 6. Sécurité      
     6.1 Authentication      
     6.2 Authorization      
-
+7. Aller plus loin      
+    7.1 Collection      
+    7.2 Event   
+    
 Pour la déscription détaillée des différentes classes du framework
 [Documentation API](https://laravel.com/api/5.7/)
 
@@ -1120,6 +1123,214 @@ class PostPolicy
     @elsecannot('create', App\Post::class)
         <!-- The Current User Can't Create New Post -->
     @endcannot
+```
+
+### 7 Aller plus loin
+
+### 7.1 Collection
+
+https://laravel.com/docs/5.7/collections les differents fonctions disponible dans les collections.       
+Le retour de Eloquent sont des collections      
+
+```php
+// Création d'une collection
+$collection = collect(['taylor', 'abigail', null])->map(function ($name) {
+    return strtoupper($name);
+})
+->reject(function ($name) {
+    return empty($name);
+});
+
+// Etendre la collection
+use Illuminate\Support\Str;
+
+Collection::macro('toUpper', function () {
+    return $this->map(function ($value) {
+        return Str::upper($value);
+    });
+});
+
+$collection = collect(['first', 'second']);
+
+$upper = $collection->toUpper();
+
+// ['FIRST', 'SECOND']
+
+// On peut créer des raccourci d'action sur les collections
+// pour les fonctions suivante average, avg, contains, each, every, filter, first, flatMap, groupBy,  keyBy, map, max, min, partition, reject, sortBy, sortByDesc, sum, and unique.
+
+$users = User::where('votes', '>', 500)->get();
+
+$users->each->markAsVip();
+Likewise, we can use the sum higher order message to gather the total number of "votes" for a collection of users:
+
+$users = User::where('group', 'Development')->get();
+return $users->sum->votes;
+```
+
+### 7.2 Event
+
+Les events sont stockés dans ```app/events```    
+Les listeners sont stockés dans ```app/Listeners```     
+
+```php
+
+// Pour register les events il faut les ajouter dans EventServiceProvider 
+protected $listen = [
+    'App\Events\OrderShipped' => [
+        'App\Listeners\SendShipmentNotification',
+    ],
+];
+
+// Pour créer automatiquement les event et les listener on peut inscrire les event et les listeners
+// dans le EventServiceProvider et lancer la commande pour génerer les fichiers
+php artisan event:generate 
+
+// On peut aussi register les events avec des closure dans EventServiceProvider
+public function boot()
+{
+    parent::boot();
+
+    Event::listen('event.name', function ($foo, $bar) {
+        //
+    });
+    
+    Event::listen('event.*', function ($eventName, array $data) {
+    //
+    });
+}
+
+// Une classe event contient les data et l'objet event
+namespace App\Events;
+
+use App\Order;
+use Illuminate\Queue\SerializesModels;
+
+class OrderShipped
+{
+    // permet de sereializer les objets eloquent
+    use SerializesModels;
+
+    public $order;
+
+    /**
+     * Create a new event instance.
+     *
+     * @param  \App\Order  $order
+     * @return void
+     */
+    public function __construct(Order $order)
+    {
+        $this->order = $order;
+    }
+}
+
+// Une class  listener
+namespace App\Listeners;
+
+use App\Events\OrderShipped;
+
+class SendShipmentNotification
+{
+    // possibilité d'injection depuis le service container
+    public function __construct()
+    {
+        //
+    }
+
+    // la fonction handle recoit l'event typ-hinté en argument
+    public function handle(OrderShipped $event)
+    {
+        // on peut stopper la propagation de l'event aux autres listeners en retournant false
+        return false;
+    }
+}
+
+
+// Pour créer des event queued il faut implémenter le listener avec ShouldQueue
+namespace App\Listeners;
+
+use App\Events\OrderShipped;
+use Illuminate\Contracts\Queue\ShouldQueue;
+
+class SendShipmentNotification implements ShouldQueue
+{
+    // on peut customier la connexion de la queued
+    public $connection = 'sqs';
+
+    // et le nom de la queued list
+    public $queue = 'listeners';
+    
+    public function handle(OrderShipped $event)
+    {
+        //
+    }
+    
+    // si la queued fail on peut catcher l'erreur dans la foncton failed
+    public function failed(OrderShipped $event, $exception)
+    {
+        //
+    }
+    
+    
+}
+
+// Dispatchter un event avec la fonction event()
+   event(new OrderShipped($order));
+
+// Créer un EventSubscriber qui est une factorisation de plusieurs listeners
+namespace App\Listeners;
+
+class UserEventSubscriber
+{
+    /**
+     * Handle user login events.
+     */
+    public function onUserLogin($event) {}
+
+    /**
+     * Handle user logout events.
+     */
+    public function onUserLogout($event) {}
+
+    /**
+     * Register the listeners for the subscriber.
+     *
+     * @param  \Illuminate\Events\Dispatcher  $events
+     */
+    public function subscribe($events)
+    {
+        $events->listen(
+            'Illuminate\Auth\Events\Login',
+            'App\Listeners\UserEventSubscriber@onUserLogin'
+        );
+
+        $events->listen(
+            'Illuminate\Auth\Events\Logout',
+            'App\Listeners\UserEventSubscriber@onUserLogout'
+        );
+    }
+}
+
+// Pour register un EventSubscriber dans le EventServiceProvider il faut utiliser la proprieté subscribe
+namespace App\Providers;
+
+use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+
+class EventServiceProvider extends ServiceProvider
+{
+    // Register les event et les eventListener
+    protected $listen = [
+        //
+    ];
+
+    // Register les eventSubscriber
+    protected $subscribe = [
+        'App\Listeners\UserEventSubscriber',
+    ];
+}
+
+
 ```
 
 ## Databases
