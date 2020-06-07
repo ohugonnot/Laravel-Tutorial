@@ -1504,4 +1504,42 @@ Schema::dropIfExists('users');
 
 ## Modèle
 
+```php
+// Creation d'un modele ressource controller + factory + migration
+php artisan make:model Model\Category -mrf
 
+// Relation dans les modèles
+// Les id dans la migration qui permette les relation doivent être unsigned() car les id auto increment le sont de base
+$table->integer('user_id')->unsigned();
+
+// One
+public function user()
+{
+    return $this->belongsTo(User::class);
+}
+// Many
+public function users()
+{
+    return $this->hasMany(User::class);
+}
+```
+
+## Factory et Seed
+
+```php
+// Utilisation de faker pour créer rapidement des données dans la base de données
+$faker->sentence->word->text;
+'user_id'=> function() {
+  return User::all()->random();
+  
+// Seeder dans la base
+class DatabaseSeeder {
+    public function run()
+    {
+        factory(User::class,10)->create();
+        factory(Reply::class,10)->create()->each(function($reply){
+            return $reply->like()->save(factory(User::class)->make())
+        });
+    }
+}
+```
