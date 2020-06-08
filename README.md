@@ -192,6 +192,8 @@ Route::put($uri, $callback);
 Route::patch($uri, $callback);
 Route::delete($uri, $callback);
 Route::options($uri, $callback);
+Route::apiRessource($uri, $callback);
+Route::ressources($uri, $callback);
 
 // on peut ajouter plusieurs méthode à la fois
 Route::match(['get', 'post'], '/', function () {
@@ -1372,6 +1374,7 @@ DB::table('users')->orderBy('id')->chunk(100, function ($users) {
 });
 
 $users = DB::table('users')->count();
+$users = DB::table('users')->latest()->get();
 $price = DB::table('orders')->max('price');
 $price = DB::table('orders')
                 ->where('finalized', 1)
@@ -1530,7 +1533,8 @@ public function users()
 // Utilisation de faker pour créer rapidement des données dans la base de données
 $faker->sentence->word->text;
 'user_id'=> function() {
-  return User::all()->random();
+    return User::all()->random();
+ }
   
 // Seeder dans la base
 class DatabaseSeeder {
@@ -1538,8 +1542,15 @@ class DatabaseSeeder {
     {
         factory(User::class,10)->create();
         factory(Reply::class,10)->create()->each(function($reply){
-            return $reply->like()->save(factory(User::class)->make())
+            return $reply->like()->save(factory(like::class)->make())
         });
     }
 }
+
+php artisan db:seed
+
+// Création de ressource pour le model afin de transformer toArray()
+php artisan make:resource UserResource
+return new UserResource($user);
+return UserResource::collection($users);
 ```
