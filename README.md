@@ -1470,8 +1470,7 @@ $users = DB::table('users')
 ```
 // Créer une migration
 php artisan make:migration create_users_table --create=users
-php artisan make:migration add_votes_to_users
-_table --table=users
+php artisan make:migration add_votes_to_users_table --table=users
 
 // Appliquer une migration
 php artisan migrate --force
@@ -1508,6 +1507,9 @@ Schema::dropIfExists('users');
 ## Modèle
 
 ```php
+php artisan make:migration create_users_table --create=users
+php artisan make:migration add_votes_to_users_table --table=users
+
 // Creation d'un modele ressource controller + factory + migration
 php artisan make:model Model\Category -mrf
 
