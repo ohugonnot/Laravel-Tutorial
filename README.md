@@ -1549,10 +1549,54 @@ class DatabaseSeeder {
     }
 }
 
+// Utiliser les seter pour les param qui recquiert des actions ou edit ou create
+User::create($request->all());
+
+// In User Model
+public setPasswordAttribute($password)
+{
+    $this->attributes['passworsd'] = bcrypt($password);
+}
+
 php artisan db:seed
 
 // Création de ressource pour le model afin de transformer toArray()
 php artisan make:resource UserResource
 return new UserResource($user);
 return UserResource::collection($users);
+```
+
+## Sécurité
+
+```php
+// Suivre les recommandations https://jwt-auth.readthedocs.io/en/develop
+// Regarder le tuto https://www.udemy.com/course/real-time-single-page-forum-app-with-pusher-laravel-vuejs/learn/lecture/9646566
+
+// Pour avoir une meilleurs modularité et des logs consistants remplacer le middleware api:auth
+// https://www.udemy.com/course/real-time-single-page-forum-app-with-pusher-laravel-vuejs/learn/lecture/9627424
+php artisan make:middleware JWT
+public function handle(Request $request, Closure $next)
+{
+    JWTAuth::parseToken()->authenticate();
+    return $next($request);
+}
+// Ensuite l'ajouter dans le routeMiddleware = [] du kernel
+// On peu aussi améliorer le handler des exeptions 
+// https://www.udemy.com/course/real-time-single-page-forum-app-with-pusher-laravel-vuejs/learn/lecture/9627426
+
+// Pour le localStorage du token voir https://www.udemy.com/course/laravel-vuejs-restful-api-course/learn/lecture/19820806
+// Egalement https://www.udemy.com/course/real-time-single-page-forum-app-with-pusher-laravel-vuejs/learn/lecture/9627456
+```
+
+## Vue
+
+```php
+
+// Possibilite d'installer Vuetify
+// https://jigeshraval.com/fr/blog/vue-js/laravel-vue-js-admin-using-vuetify
+npm install vuetify
+npm install sass sass-loader fibers deepmerge -D
+
+// Install vue-router
+npm install vue-router
 ```
