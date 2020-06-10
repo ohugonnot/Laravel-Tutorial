@@ -1,13 +1,13 @@
 # Laravel-Tutorial
 
 ### Les plugins interessants
-https://github.com/fruitcake/laravel-cors - ajouter les cors pour les apis
-https://github.com/barryvdh/laravel-ide-helper - helper pour les ide et phpstorm
-https://github.com/barryvdh/laravel-debugbar - toolbar symfony like
-https://github.com/tymondesigns/jwt-auth - auth JWT pour les apis
-https://github.com/Intervention/image - gestion des images
-https://github.com/Maatwebsite/Laravel-Excel - lib excel
-
+https://github.com/fruitcake/laravel-cors - ajouter les cors pour les apis       
+https://github.com/barryvdh/laravel-ide-helper - helper pour les ide et phpstorm      
+https://github.com/barryvdh/laravel-debugbar - toolbar symfony like       
+https://github.com/tymondesigns/jwt-auth - auth JWT pour les apis      
+https://github.com/Intervention/image - gestion des images      
+https://github.com/Maatwebsite/Laravel-Excel - lib excel     
+      
 1. Install
 2. Configuration
 3. Concepts du Framework        
